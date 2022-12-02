@@ -13,7 +13,7 @@
 		<language>en-US</language>
 		<icon>Icon.png</icon>
 		<license type="file">LICENSE</license>
-		<projectUrl>https://github.com/ALiwoto/MTProto</projectUrl>
+		<projectUrl>https://github.com/ALiwoto/MTProto.NET</projectUrl>
 	</metadata>
 	<files>
 		<file src="Icon.png" target="" />
