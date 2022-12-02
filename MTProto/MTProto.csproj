@@ -15,9 +15,9 @@
 		<PackageId>MTProto</PackageId>
 		<Version>1.0.2</Version>
 		<Authors>ALiwoto</Authors>
-    	<PackageProjectUrl>https://github.com/ALiwoto/MTProto</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/ALiwoto/MTProto</RepositoryUrl>
-		<PackageIconUrl>https://github.com/ALiwoto/MTProto/raw/master/MTProto/Icon.ico</PackageIconUrl>
+    	<PackageProjectUrl>https://github.com/ALiwoto/MTProto.NET</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/ALiwoto/MTProto.NET</RepositoryUrl>
+		<PackageIconUrl>https://github.com/ALiwoto/MTProto.NET/raw/master/MTProto/Icon.ico</PackageIconUrl>
 		<PackageIcon>Icon.png</PackageIcon>
 		<RepositoryType>git</RepositoryType>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -25,6 +25,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<license>LICENSE</license>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 	</PropertyGroup>
 	<!--===================================================-->
 	<PropertyGroup>
@@ -35,6 +36,7 @@
 	<ItemGroup>
     	<None Include="Icon.png" Pack="true" PackagePath="\" />
 		<None Include="..\LICENSE" Pack="true" PackagePath="\" />
+		<None Include="..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 	<!--===================================================-->
 	<ItemGroup>
