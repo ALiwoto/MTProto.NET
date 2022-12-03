@@ -173,7 +173,8 @@ namespace MTProto.Client
         {
             foreach (var chat in chats)
             {
-                if (await MTProtoDatabase.GetPeerInfo(chat.Key) != null)
+                var fixedId = FixChatID(chat.Key);
+                if (await MTProtoDatabase.GetPeerInfo(fixedId) != null)
                 {
                     continue;
                 }
