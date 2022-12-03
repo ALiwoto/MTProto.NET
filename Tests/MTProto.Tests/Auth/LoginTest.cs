@@ -16,7 +16,7 @@ namespace MTProto.Tests.Auth
                 botToken: "",
                 apiId: "",
                 apiHash: ""
-                );
+            );
             Assert.NotNull(await client.Start());
             var md = MdContainer.GetNormal(client, "hello ! ,,").Bold("\nHow are you doing??");
             await client.SendMessage("Falling_inside_the_black", md);
@@ -37,7 +37,7 @@ namespace MTProto.Tests.Auth
                 botToken: "",
                 apiId: "",
                 apiHash: ""
-                );
+            );
 
             Assert.NotNull(await client.Start());
 
@@ -48,7 +48,7 @@ namespace MTProto.Tests.Auth
 
             infos = client.MTProtoDatabase.PeerInfos.FromSql(
                 $"SELECT * FROM PeerInfos WHERE PeerId = 1341091260"
-                ).ToList();
+            ).ToList();
 
             Assert.NotNull(infos);
 
