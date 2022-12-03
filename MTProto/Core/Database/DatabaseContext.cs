@@ -9,7 +9,6 @@ using System.IO;
 using System.Reflection.Metadata;
 using MTProto.Core.Database.Models;
 using Microsoft.EntityFrameworkCore.Design;
-using TL;
 
 namespace MTProto.Core.Database
 {

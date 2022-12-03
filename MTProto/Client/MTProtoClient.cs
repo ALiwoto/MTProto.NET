@@ -54,16 +54,12 @@ namespace MTProto.Client
             wClient = new WTelegram.Client(configProvider);
         }
 
-        public virtual void SetDatabase(DatabaseContext db)
-        {
-            MTProtoDatabase = db;
-        }
-        public virtual void SetDatabase<T>(T db) where T : DatabaseContext
+        public virtual void SetDatabase<T>(T db) where T : IMTProtoDbProvider
         {
             MTProtoDatabase = db;
         }
 
-        public virtual async Task<TL.User> Start(DatabaseContext db = null)
+        public virtual async Task<TL.User> Start(IMTProtoDbProvider db = null)
         {
 
             CachedMe = await LoginIfNeeded();

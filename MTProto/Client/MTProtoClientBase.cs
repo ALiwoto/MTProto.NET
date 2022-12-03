@@ -53,7 +53,7 @@ namespace MTProto.Client
         
         #endregion
 
-        public virtual DatabaseContext MTProtoDatabase { get; protected set; }
+        public virtual IMTProtoDbProvider MTProtoDatabase { get; protected set; }
 
         public TL.User CachedMe { get; protected set; }
         internal WTelegram.Client wClient;
@@ -66,13 +66,13 @@ namespace MTProto.Client
             {
                 foreach (var current in updates.updates)
                 {
+                    await StoreAccessHashes(updates.Users);
+                    await StoreAccessHashes(updates.Chats);
                     await RunUpdateHandlers(current);
                 }
 
                 return;
             }
-
-            await StoreAccessHashes(arg);
 
             switch (arg)
             {
@@ -149,11 +149,45 @@ namespace MTProto.Client
 
             return;
         }
-        protected internal virtual async Task StoreAccessHashes(TL.IObject arg)
+        protected internal virtual async Task StoreAccessHashes(Dictionary<long, TL.User> users)
         {
-            //UpdateShortSentMessage
-            Console.WriteLine(arg?.GetType());
-            return;
+            foreach (var user in users)
+            {
+                if (await MTProtoDatabase.GetPeerInfo(user.Key) != null)
+                {
+                    continue;
+                }
+
+                MTProtoDatabase.SaveNewUser(user.Key, user.Value.access_hash);
+            }
         }
+        protected internal virtual async Task StoreAccessHashes(Dictionary<long, TL.ChatBase> chats)
+        {
+            foreach (var chat in chats)
+            {
+                if (await MTProtoDatabase.GetPeerInfo(chat.Key) != null)
+                {
+                    continue;
+                }
+
+                // Derived classes: TL.ChatEmpty, TL.Chat, TL.ChatForbidden, TL.Channel, TL.ChannelForbidden
+                switch (chat.Value)
+                {
+                    case TL.ChannelForbidden:
+                    case TL.ChatForbidden:
+                    case TL.ChatEmpty:
+                    case TL.Chat:
+                        return;
+                    case TL.Channel channel:
+                        MTProtoDatabase.SaveNewChannel(FixChatID(channel.ID), channel.access_hash);
+                        return;
+                }
+
+                //MTProtoDatabase.SaveNewUser(chat.Key, chat.Value.);
+            }
+
+        }
+        public virtual long FixChatID(long chatId) =>
+            Convert.ToInt64("-100" + Math.Abs(chatId));
     }
 }
