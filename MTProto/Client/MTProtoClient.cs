@@ -3,29 +3,14 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
-using TL;
+using MTProto.Core.Database;
+using MTProto.Client.Events;
 
 namespace MTProto.Client
 {
-    public class MTProtoClient : IDisposable
+    public class MTProtoClient : MTProtoClientBase
     {
-        protected string _sessionName;
-        protected string _sessionFileName;
-        protected string _botToken;
-        protected string _apiId;
-        protected string _apiHash;
-        protected string _phoneNumber;
-        protected Func<string> _verificationCodeProvider;
-        protected string _firstName;
-        protected string _lastName;
-        protected string _password;
-        protected string _sessionKey;
-        protected string _serverAddress;
-        protected string _deviceModel;
-
-
-        internal WTelegram.Client wClient;
-
+        
         public MTProtoClient(
             string botToken = null, string apiId = null, 
             string apiHash = null, string phoneNumber = null,
@@ -57,6 +42,7 @@ namespace MTProto.Client
 
 
             _sessionFileName = sessionFileName;
+            _isBot = !string.IsNullOrEmpty(_botToken);
             wClient = new WTelegram.Client(configProvider: ConfigProvider);
         }
 
@@ -64,41 +50,95 @@ namespace MTProto.Client
             string sessionFileName = "mtproto_session.session")
         {
             _sessionFileName = sessionFileName;
+            _isBot = !string.IsNullOrEmpty(_botToken);
             wClient = new WTelegram.Client(configProvider);
         }
 
-        public virtual async Task<User> Start()
+        public virtual void SetDatabase(DatabaseContext db)
         {
-            if (!string.IsNullOrEmpty(_botToken))
+            MTProtoDatabase = db;
+        }
+        public virtual void SetDatabase<T>(T db) where T : DatabaseContext
+        {
+            MTProtoDatabase = db;
+        }
+
+        public virtual async Task<TL.User> Start(DatabaseContext db = null)
+        {
+
+            CachedMe = await LoginIfNeeded();
+
+            MTProtoDatabase = db ?? new DatabaseContext(CachedMe.ID);
+
+            await MTProtoDatabase.DoMigrate();
+            if (!await MTProtoDatabase.VerifyOwner(_isBot))
             {
-                return await wClient.LoginBotIfNeeded(_botToken);
+                // we have failed to verify the owner account, we will have to
+                // recreate the db file.
+                RecreateDatabase();
+                if (!await MTProtoDatabase.VerifyOwner(_isBot))
+                {
+                    throw new InvalidOperationException("Failed to verify the owner account in database.");
+                }
             }
 
-            return await wClient.LoginUserIfNeeded();
+            wClient.OnUpdate += RunUpdateHandlers;
+            return CachedMe;
         }
+
+
+
+        public virtual void RecreateDatabase()
+        {
+            // cache the path before disposing the db object.
+            var path = MTProtoDatabase.DbPath;
+            MTProtoDatabase.Dispose();
+            File.Delete(path);
+            MTProtoDatabase = new DatabaseContext(CachedMe.ID);
+        }
+
+        public virtual async Task<TL.User> LoginIfNeeded() =>
+            _isBot ? await wClient.LoginBotIfNeeded(_botToken) :
+            await wClient.LoginUserIfNeeded();
         public virtual void Close() => Dispose();
 
-        public async void SendMessage(long chatId, MdContainer text)
-        {
-            await wClient.SendMessageAsync(await GetInputPeer(chatId), text?.Text, null, 0, text?.ToEntities(), default, false);
-        }
-
-        public async Task SendMessage(string chatId, MdContainer text)
+        public async void SendMessage(long chatId, MdContainer text, int ReplyToMessageId = 0)
         {
             var txtEntities = text?.ToEntities();
             var theText = text?.Text;
-            await wClient.SendMessageAsync(await GetInputPeer(chatId), theText, null, 0, txtEntities, default, false);
+            await wClient.SendMessageAsync(
+                await GetInputPeer(chatId), 
+                theText, 
+                null, ReplyToMessageId, txtEntities, default, false);
         }
 
-        public async Task<InputPeer> GetInputPeer(long chatId)
+        public async Task SendMessage(string chatId, MdContainer text, int ReplyToMessageId = 0)
         {
-            return null;
+            var txtEntities = text?.ToEntities();
+            var theText = text?.Text;
+            await wClient.SendMessageAsync(
+                await GetInputPeer(chatId), 
+                theText, null, ReplyToMessageId, txtEntities, default, false);
         }
 
-        public async Task<InputPeer> GetInputPeer(string chatId)
+        public async Task<TL.InputPeer> GetInputPeer(long chatId)
         {
-            var results = await wClient?.Contacts_ResolveUsername(chatId);
+            return new TL.InputPeerUser(chatId, 0);
+        }
+
+        public async Task<TL.InputPeer> GetInputPeer(string chatId)
+        {
+            var results = await ResolveUsername(chatId);
             return results?.UserOrChat?.ToInputPeer();
+        }
+
+
+        public Task<TL.Contacts_ResolvedPeer> ResolveUsername(string username)
+        {
+            return wClient.Invoke(new TL.Methods.Contacts_ResolveUsername
+            {
+                username = username
+            });
         }
 
         private string ConfigProvider(string key)
@@ -121,7 +161,7 @@ namespace MTProto.Client
                 default: return null;
             };
         }
-        public void Dispose()
+        public override void Dispose()
         {
             wClient.Dispose();
             GC.SuppressFinalize(this);

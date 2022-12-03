@@ -1,5 +1,6 @@
 ﻿
 using MTProto.Client;
+using MTProto.Client.Events;
 using MTProto.Utils.Md;
 
 namespace MTProto.Tests.Auth
@@ -18,7 +19,21 @@ namespace MTProto.Tests.Auth
             var md = MdContainer.GetNormal(client, "hello ! ,,").Bold("\nHow are you doing??");
             await client.SendMessage("Falling_inside_the_black", md);
 
+            client.EventNewMessage += NewMessageHandler;
+
+            Thread.Sleep(1000000);
+
             client.Close();
         }
-    }
+
+        public static async Task NewMessageHandler(MTProtoClientBase c, TL.UpdateNewMessage update)
+        {
+            if (update.message is TL.Message msg)
+            {
+                Console.WriteLine(msg.message);
+            }
+            
+            return;
+        }
+}
 }
