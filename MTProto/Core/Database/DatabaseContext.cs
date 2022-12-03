@@ -12,15 +12,15 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace MTProto.Core.Database
 {
-    public class DatabaseContext : DbContext
+    public sealed class DatabaseContext : DbContext, IMTProtoDbProvider
     {
         public string DbPath { get; set; }
-        public long OwnerId { get; protected set; }
+        public long OwnerId { get; set; }
 
         public DbSet<PeerInfo> PeerInfos { get; set; }
         public DbSet<OwnerPeerInfo> OwnerInfos { get; set; }
 
-        protected object _dbLock = new object();
+        private readonly object _dbLock = new();
         public DatabaseContext(long ownerId = 0)
         {
             OwnerId = ownerId;
@@ -33,17 +33,17 @@ namespace MTProto.Core.Database
             DbPath = path;
         }
 
-        public virtual void SetOwnerId(long ownerId)
+        public void SetOwnerId(long ownerId)
         {
             DbPath = $"mtproto_{ownerId}.db";
         }
 
-        public virtual async Task DoMigrate()
+        public async Task DoMigrate()
         {
             await Database.MigrateAsync();
         }
 
-        public virtual async Task<bool> VerifyOwner(bool isBot, bool secondTime = false)
+        public async Task<bool> VerifyOwner(bool isBot, bool secondTime = false)
         {
             try
             {
@@ -71,13 +71,13 @@ namespace MTProto.Core.Database
             }
         }
 
-        public virtual void SaveNewUser(long userId, long accessHash) =>
+        public void SaveNewUser(long userId, long accessHash) =>
             SaveNewPeer(new PeerInfo()
             {
                 PeerId = userId,
                 AccessHash = accessHash,
             });
-        public virtual void SaveNewPeer(PeerInfo info)
+        public void SaveNewPeer(PeerInfo info)
         {
             lock (_dbLock) 
             {
@@ -85,6 +85,8 @@ namespace MTProto.Core.Database
                 SaveChanges();
             }
         }
+        public async Task<PeerInfo> GetPeerInfo(long peerId) => 
+            await PeerInfos.FindAsync(peerId);
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
             options.UseSqlite($"Data Source={DbPath}");
