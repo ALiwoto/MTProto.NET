@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace MTProto.Client.Events
 {
     /// <summary>
-    /// An exception type that throws when and only when
+    /// An exception type that gets thrown when and only when
     /// we want to continue the execution of handlers of next group.
     /// </summary>
     public class ContinueGroupsException : Exception

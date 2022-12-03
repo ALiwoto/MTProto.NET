@@ -10,6 +10,7 @@ namespace MTProto.Tests.Auth
         [Fact]
         public async void Test1()
         {
+            //TODO: load these variables from env or from config file.
             var client = new MTProtoClient(
                 botToken: "",
                 apiId: "",
@@ -30,10 +31,9 @@ namespace MTProto.Tests.Auth
         {
             if (update.message is TL.Message msg)
             {
-                await c.SendMessage(msg.From.ID, MdContainer.GetNormal(c, "got your message!"), msg.ID);
+                await c.SendMessage(update.message.Peer.ID, MdContainer.GetNormal(c, "got your message!"), msg.ID);
                 Console.WriteLine(msg.message);
             }
-            return;
         }
 }
 }
