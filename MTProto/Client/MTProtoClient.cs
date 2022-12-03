@@ -6,6 +6,7 @@ using System.IO;
 using MTProto.Core.Database;
 using MTProto.Client.Events;
 using MTProto.Core.Database.Models;
+using MTProto.Core.Errors;
 
 namespace MTProto.Client
 {
@@ -121,6 +122,9 @@ namespace MTProto.Client
         public async Task<TL.InputPeer> GetInputPeer(long chatId)
         {
             var info = await MTProtoDatabase.GetPeerInfo(FixChatID(chatId));
+            if (info == null)
+                throw new InvalidPeerIdException();
+
             return info.PeerType switch
             {
                 PeerType.PeerTypeChannel => new TL.InputPeerChannel(chatId, info.AccessHash),
