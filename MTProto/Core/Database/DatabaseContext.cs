@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection.Metadata;
 using MTProto.Core.Database.Models;
 using Microsoft.EntityFrameworkCore.Design;
+using TL;
 
 namespace MTProto.Core.Database
 {
@@ -76,6 +77,21 @@ namespace MTProto.Core.Database
             {
                 PeerId = userId,
                 AccessHash = accessHash,
+                PeerType = PeerType.PeerTypeUser,
+            });
+        public void SaveNewChat(long chatId, long accessHash) =>
+            SaveNewPeer(new PeerInfo()
+            {
+                PeerId = chatId,
+                AccessHash = accessHash,
+                PeerType = PeerType.PeerTypeChat,
+            });
+        public void SaveNewChannel(long channelId, long accessHash) =>
+            SaveNewPeer(new PeerInfo()
+            {
+                PeerId = channelId,
+                AccessHash = accessHash,
+                PeerType = PeerType.PeerTypeChannel,
             });
         public void SaveNewPeer(PeerInfo info)
         {

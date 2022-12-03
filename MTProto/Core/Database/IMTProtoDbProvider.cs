@@ -18,6 +18,9 @@ namespace MTProto.Core.Database
         Task DoMigrate();
         Task<bool> VerifyOwner(bool isBot, bool secondTime = false);
         void SaveNewUser(long userId, long accessHash);
+        void SaveNewChat(long chatId, long accessHash);
+        void SaveNewChannel(long channelId, long accessHash);
         void SaveNewPeer(PeerInfo info);
+        Task<PeerInfo> GetPeerInfo(long peerId);
     }
 }
