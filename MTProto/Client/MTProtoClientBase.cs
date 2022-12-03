@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using MTProto.Client.Events;
 using MTProto.Core.Database;
+using MTProto.Utils.Md;
 
 namespace MTProto.Client
 {
@@ -58,8 +59,15 @@ namespace MTProto.Client
         public TL.User CachedMe { get; protected set; }
         internal WTelegram.Client wClient;
 
+        public abstract Task SendMessage(long chatId, MdContainer text, int ReplyToMessageId = 0);
+        public abstract Task SendMessage(string chatId, MdContainer text, int ReplyToMessageId = 0);
+        public abstract Task SendMessage(TL.Peer chatId, MdContainer text, int ReplyToMessageId = 0);
+        public abstract Task<TL.InputPeer> GetInputPeer(long chatId, bool isUser);
+        public abstract Task<TL.InputPeer> GetInputPeer(TL.Peer chatId);
+
         public abstract void Dispose();
 
+        #region event-related methods
         protected internal virtual async Task RunUpdateHandlers(TL.IObject arg)
         {
             if (arg is TL.Updates updates)
@@ -187,6 +195,7 @@ namespace MTProto.Client
             }
 
         }
+        #endregion
         public virtual long FixChatID(long chatId) =>
             Convert.ToInt64("-100" + Math.Abs(chatId));
     }

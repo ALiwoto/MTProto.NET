@@ -100,17 +100,35 @@ namespace MTProto.Client
             await wClient.LoginUserIfNeeded();
         public virtual void Close() => Dispose();
 
-        public async void SendMessage(long chatId, MdContainer text, int ReplyToMessageId = 0)
+        /// <summary>
+        /// Sends a message to a certain chat, using its chatId.
+        /// </summary>
+        /// <param name="chatId">
+        /// the chat id of the target chat. 
+        /// Please do notice that if the chat is a supergroup/channel, the id
+        /// should start with -100 (same as bot api and pyrogram).
+        /// </param>
+        /// <param name="text"></param>
+        /// <param name="ReplyToMessageId"></param>
+        /// <returns></returns>
+        public override async Task SendMessage(long chatId, MdContainer text, int ReplyToMessageId = 0)
         {
             var txtEntities = text?.ToEntities();
             var theText = text?.Text;
             await wClient.SendMessageAsync(
-                await GetInputPeer(chatId), 
+                await GetInputPeer(chatId, false), 
                 theText, 
                 null, ReplyToMessageId, txtEntities, default, false);
         }
-
-        public async Task SendMessage(string chatId, MdContainer text, int ReplyToMessageId = 0)
+        public override async Task SendMessage(TL.Peer chatId, MdContainer text, int ReplyToMessageId = 0)
+        {
+            var txtEntities = text?.ToEntities();
+            var theText = text?.Text;
+            await wClient.SendMessageAsync(
+                await GetInputPeer(chatId),
+                theText, null, ReplyToMessageId, txtEntities, default, false);
+        }
+        public override async Task SendMessage(string chatId, MdContainer text, int ReplyToMessageId = 0)
         {
             var txtEntities = text?.ToEntities();
             var theText = text?.Text;
@@ -118,10 +136,17 @@ namespace MTProto.Client
                 await GetInputPeer(chatId), 
                 theText, null, ReplyToMessageId, txtEntities, default, false);
         }
-
-        public async Task<TL.InputPeer> GetInputPeer(long chatId)
+        public override async Task<TL.InputPeer> GetInputPeer(TL.Peer chatId) =>
+            chatId switch
+            {
+                TL.PeerUser => await GetInputPeer(chatId.ID, false),
+                TL.PeerChannel => await GetInputPeer(chatId.ID, true),
+                TL.PeerChat => await GetInputPeer(chatId.ID, false), // hacky way to prevent -100 insertion
+                _ => null,
+            };
+        public override async Task<TL.InputPeer> GetInputPeer(long chatId, bool needsFix)
         {
-            var info = await MTProtoDatabase.GetPeerInfo(FixChatID(chatId));
+            var info = await MTProtoDatabase.GetPeerInfo(needsFix ? FixChatID(chatId) : chatId);
             if (info == null)
                 throw new InvalidPeerIdException();
 

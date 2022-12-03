@@ -26,13 +26,13 @@ namespace MTProto.Tests.Auth
             client.Close();
         }
 
-        public static async Task NewMessageHandler(MTProtoClientBase c, TL.UpdateNewMessage update)
+        private static async Task NewMessageHandler(MTProtoClientBase c, TL.UpdateNewMessage update)
         {
             if (update.message is TL.Message msg)
             {
+                await c.SendMessage(msg.From.ID, MdContainer.GetNormal(c, "got your message!"), msg.ID);
                 Console.WriteLine(msg.message);
             }
-            
             return;
         }
 }

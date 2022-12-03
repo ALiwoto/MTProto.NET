@@ -9,9 +9,9 @@ namespace MTProto.Utils.Md
     public class MdContainer
     {
         public string Text { get; set; }
-        private readonly MTProtoClient _hostClient;
+        private readonly MTProtoClientBase _hostClient;
 
-        public MdContainer(MTProtoClient client)
+        public MdContainer(MTProtoClientBase client)
         {
             _hostClient = client;
         }
@@ -35,7 +35,7 @@ namespace MTProto.Utils.Md
 
 
 
-        public static MdContainer GetNormal(MTProtoClient client, string text) =>
+        public static MdContainer GetNormal(MTProtoClientBase client, string text) =>
             new MdContainer(client).Normal(text);
 
         public TL.MessageEntity[] ToEntities(bool premium = false) 
