@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.IO;
 using MTProto.Core.Database;
 using MTProto.Client.Events;
+using MTProto.Core.Database.Models;
 
 namespace MTProto.Client
 {
@@ -119,7 +120,19 @@ namespace MTProto.Client
 
         public async Task<TL.InputPeer> GetInputPeer(long chatId)
         {
-            return new TL.InputPeerUser(chatId, 0);
+            var info = await MTProtoDatabase.GetPeerInfo(FixChatID(chatId));
+            return info.PeerType switch
+            {
+                PeerType.PeerTypeChannel => new TL.InputPeerChannel(chatId, info.AccessHash),
+                PeerType.PeerTypeUser => new TL.InputPeerUser(chatId, info.AccessHash),
+                PeerType.PeerTypeChat => new TL.InputPeerChat(chatId),
+                PeerType.PeerTypeEmpty or
+                PeerType.PeerTypeSelf or 
+                PeerType.PeerTypeUserFromMessage or 
+                PeerType.PeerTypeChannelFromMessage => 
+                    throw new NotImplementedException($"{info.PeerType} not implemented"),
+                _ => null,
+            };
         }
 
         public async Task<TL.InputPeer> GetInputPeer(string chatId)
