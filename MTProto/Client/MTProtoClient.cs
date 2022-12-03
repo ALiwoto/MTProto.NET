@@ -120,6 +120,13 @@ namespace MTProto.Client
                 theText, 
                 null, ReplyToMessageId, txtEntities, default, false);
         }
+        /// <summary>
+        /// Sends a message
+        /// </summary>
+        /// <param name="chatId"></param>
+        /// <param name="text"></param>
+        /// <param name="ReplyToMessageId"></param>
+        /// <returns></returns>
         public override async Task SendMessage(TL.Peer chatId, MdContainer text, int ReplyToMessageId = 0)
         {
             var txtEntities = text?.ToEntities();
@@ -141,7 +148,7 @@ namespace MTProto.Client
             {
                 TL.PeerUser => await GetInputPeer(chatId.ID, false),
                 TL.PeerChannel => await GetInputPeer(chatId.ID, true),
-                TL.PeerChat => await GetInputPeer(chatId.ID, false), // hacky way to prevent -100 insertion
+                TL.PeerChat => await GetInputPeer(chatId.ID, false),
                 _ => null,
             };
         public override async Task<TL.InputPeer> GetInputPeer(long chatId, bool needsFix)
