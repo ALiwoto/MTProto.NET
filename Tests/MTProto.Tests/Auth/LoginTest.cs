@@ -50,6 +50,7 @@ namespace MTProto.Tests.Auth
                 $"SELECT * FROM PeerInfos WHERE PeerId = 1341091260"
             ).ToList();
 
+
             Assert.NotNull(infos);
 
             Console.WriteLine(infos);

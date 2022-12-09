@@ -99,9 +99,12 @@ namespace MTProto.Core.Database
                 PeerInfos.Add(info);
                 SaveChanges();
             }
+
         }
         public async Task<PeerInfo> GetPeerInfo(long peerId) => 
             await PeerInfos.FindAsync(peerId);
+        public int GetPeersCount(PeerType peerType) =>
+            PeerInfos.Where(i => i.PeerType == peerType).Count();
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
             options.UseSqlite($"Data Source={DbPath}");
