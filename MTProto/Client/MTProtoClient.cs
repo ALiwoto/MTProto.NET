@@ -7,6 +7,7 @@ using MTProto.Core.Database;
 using MTProto.Client.Events;
 using MTProto.Core.Database.Models;
 using MTProto.Core.Errors;
+using System.Text;
 
 namespace MTProto.Client
 {
@@ -17,23 +18,35 @@ namespace MTProto.Client
             string botToken = null, string apiId = null, 
             string apiHash = null, string phoneNumber = null,
             Func<string> verificationCodeProvider = null,
+            Func<string> passphraseProvider = null,
             string firstName = null, string lastName = null,
             string password = null, string sessionName = null,
             string sessionKey = null, string serverAdsress = null,
-            string deviceModel = null,
-            
+            string deviceModel = null, string systemVersion = null,
+            string systemLangCode = null,
+            string appVersion = null,
+            Stream sessionStore = null,
+            IMTProtoDbProvider dbProvider = null,
             
             string sessionFileName = "mtproto_session.session")
         {
-            if (!Directory.Exists(sessionFileName))
+            if (!string.IsNullOrEmpty(sessionFileName) && 
+                    !File.Exists(sessionFileName))
             {
                 File.Create(sessionFileName)?.Close();
             }
+
             _botToken = botToken;
+            if (!string.IsNullOrEmpty(botToken))
+                ownerId = botToken.Split(":")[0];
+            else
+                ownerId = phoneNumber.Replace(" ", "");
+
             _apiId = apiId;
             _apiHash = apiHash;
             _phoneNumber = phoneNumber;
             _verificationCodeProvider = verificationCodeProvider;
+            _passphraseProvider = passphraseProvider;
             _firstName = firstName;
             _lastName = lastName;
             _password = password;
@@ -41,11 +54,22 @@ namespace MTProto.Client
             _sessionKey = sessionKey;
             _serverAddress = serverAdsress;
             _deviceModel = deviceModel;
-
+            _systemVersion = systemVersion;
+            _appVersion = appVersion;
+            _systemLangCode = systemLangCode;
 
             _sessionFileName = sessionFileName;
+            MTProtoDatabase = dbProvider ?? 
+                new DatabaseContext(sessionFileName);
+
+            if (sessionStore != null)
+                SessionStore = sessionStore;
+
+            MTProtoDatabase.DoMigrate();
             _isBot = !string.IsNullOrEmpty(_botToken);
-            wClient = new WTelegram.Client(configProvider: ConfigProvider);
+            wClient = new WTelegram.Client(
+                configProvider: ConfigProvider,
+                sessionStore: SessionStore);
         }
 
         public MTProtoClient(Func<string, string> configProvider,
@@ -63,18 +87,33 @@ namespace MTProto.Client
 
         public virtual async Task<TL.User> Start(IMTProtoDbProvider db = null)
         {
-
             CachedMe = await LoginIfNeeded();
 
-            MTProtoDatabase = db ?? new DatabaseContext(CachedMe.ID);
-
-            await MTProtoDatabase.DoMigrate();
-            if (!await MTProtoDatabase.VerifyOwner(_isBot))
+            if (db != null)
             {
+                MTProtoDatabase = db;
+            }
+            else MTProtoDatabase ??= new DatabaseContext(_sessionFileName);
+            
+            
+            var ownerInfo = new OwnerPeerInfo()
+            {
+                AuthKey = MTProtoDatabase.GetOwnerAuthData(ownerId),
+                IsBot  = CachedMe.IsBot,
+                OwnerId = ownerId,
+            };
+            if (!await MTProtoDatabase.VerifyOwner(ownerInfo))
+            {
+                if (MTProtoDatabase is not DatabaseContext)
+                {
+                    // is the database a custom type?
+                    throw new InvalidOperationException("Failed to verify the owner account in database.");
+                }
+
                 // we have failed to verify the owner account, we will have to
                 // recreate the db file.
                 RecreateDatabase();
-                if (!await MTProtoDatabase.VerifyOwner(_isBot))
+                if (!await MTProtoDatabase.VerifyOwner(ownerInfo))
                 {
                     throw new InvalidOperationException("Failed to verify the owner account in database.");
                 }
@@ -92,7 +131,7 @@ namespace MTProto.Client
             var path = MTProtoDatabase.DbPath;
             MTProtoDatabase.Dispose();
             File.Delete(path);
-            MTProtoDatabase = new DatabaseContext(CachedMe.ID);
+            MTProtoDatabase = new DatabaseContext(_sessionFileName);
         }
 
         public virtual async Task<TL.User> LoginIfNeeded() =>
@@ -154,18 +193,18 @@ namespace MTProto.Client
         public override async Task<TL.InputPeer> GetInputPeer(long chatId, bool needsFix)
         {
             var info = await MTProtoDatabase.GetPeerInfo(needsFix ? FixChatID(chatId) : chatId);
-            if (info == null)
-                throw new InvalidPeerIdException();
 
-            return info.PeerType switch
+            return info == null
+                ? throw new InvalidPeerIdException()
+                : info.PeerType switch
             {
                 PeerType.PeerTypeChannel => new TL.InputPeerChannel(chatId, info.AccessHash),
                 PeerType.PeerTypeUser => new TL.InputPeerUser(chatId, info.AccessHash),
                 PeerType.PeerTypeChat => new TL.InputPeerChat(chatId),
                 PeerType.PeerTypeEmpty or
-                PeerType.PeerTypeSelf or 
-                PeerType.PeerTypeUserFromMessage or 
-                PeerType.PeerTypeChannelFromMessage => 
+                PeerType.PeerTypeSelf or
+                PeerType.PeerTypeUserFromMessage or
+                PeerType.PeerTypeChannelFromMessage =>
                     throw new NotImplementedException($"{info.PeerType} not implemented"),
                 _ => null,
             };
@@ -188,23 +227,29 @@ namespace MTProto.Client
 
         private string ConfigProvider(string key)
         {
-            switch (key)
+            return key switch
             {
-                case "session_pathname": return _sessionFileName;
-                case "api_id": return _apiId;
-                case "api_hash": return _apiHash;
-                case "phone_number": return _phoneNumber;
-                case "verification_code": return _verificationCodeProvider?.Invoke();
-                case "first_name": return _firstName;
-                case "last_name": return _lastName;
-                case "password": return _password;
-                case "session_key": return _sessionKey;
-                case "bot_token": return _botToken;
-                case "server_address": return _serverAddress;
-                case "device_model": return _deviceModel;
-                case "": return null;
-                default: return null;
+                "session_pathname" => _sessionFileName,
+                "api_id" => _apiId,
+                "api_hash" => _apiHash,
+                "phone_number" => _phoneNumber,
+                "verification_code" => _verificationCodeProvider?.Invoke(),
+                "first_name" => _firstName,
+                "last_name" => _lastName,
+                "password" => _password ?? _passphraseProvider?.Invoke(),
+                "session_key" => _sessionKey,
+                "bot_token" => _botToken,
+                "server_address" => _serverAddress,
+                "device_model" => _deviceModel,
+                "system_version" => _systemVersion,
+                "app_version" => _appVersion,
+                "system_lang_code" => _systemLangCode,
+                "lang_pack" =>  _langPack,
+                "lang_code" => _langCode,
+                "" => null,
+                _ => null,
             };
+            ;
         }
         public override void Dispose()
         {

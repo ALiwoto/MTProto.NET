@@ -11,8 +11,23 @@ namespace MTProto.Core.Database.Models
     public class OwnerPeerInfo
     {
         [Key]
-        public long OwnerId { get; set; }
+        public string OwnerId { get; set; }
         public byte[] AuthKey { get; set; }
         public bool IsBot { get; set; }
+
+
+        public bool AreSame(OwnerPeerInfo other)
+        {
+            if (this == other) return true;
+
+            if (this == null) return false;
+
+            if (OwnerId != other.OwnerId) return false;
+
+            if (AuthKey == null || AuthKey.Length != other.AuthKey.Length) 
+                return false;
+
+            return AuthKey.SequenceEqual(other.AuthKey);
+        }
     }
 }

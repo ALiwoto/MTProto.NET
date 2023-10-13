@@ -4,18 +4,19 @@
 	-->
 	<!--===================================================-->
 	<PropertyGroup>
-	    <OutputType>Library</OutputType>
+		<OutputType>Library</OutputType>
+		<Nullable>disable</Nullable>
 		<TargetFrameworks>net6.0;net7.0</TargetFrameworks>
 		<RootNamespace>MTProto</RootNamespace>
 		<AssemblyName>MTProto</AssemblyName>
 		<Deterministic>true</Deterministic>
-	    <IncludeSymbols>true</IncludeSymbols>
+		<IncludeSymbols>true</IncludeSymbols>
 		<description>A MTProto client library based on wiz0u/WTelegramClient</description>
 		<NeutralLanguage>en-US</NeutralLanguage>
 		<PackageId>MTProto</PackageId>
 		<Version>1.0.2</Version>
 		<Authors>ALiwoto</Authors>
-    	<PackageProjectUrl>https://github.com/ALiwoto/MTProto.NET</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/ALiwoto/MTProto.NET</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/ALiwoto/MTProto.NET</RepositoryUrl>
 		<PackageIconUrl>https://github.com/ALiwoto/MTProto.NET/raw/master/MTProto/Icon.ico</PackageIconUrl>
 		<PackageIcon>Icon.png</PackageIcon>
@@ -32,10 +33,22 @@
 	<PropertyGroup>
 		<NoWarn>1591;1701;1702;1705</NoWarn>
 	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net6.0|AnyCPU'">
+	  <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net6.0|AnyCPU'">
+	  <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net7.0|AnyCPU'">
+	  <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net7.0|AnyCPU'">
+	  <CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
+	</PropertyGroup>
 	<!--===================================================-->
 	<!--===================================================-->
 	<ItemGroup>
-    	<None Include="Icon.png" Pack="true" PackagePath="\" />
+		<None Include="Icon.png" Pack="true" PackagePath="\" />
 		<None Include="..\LICENSE" Pack="true" PackagePath="\" />
 		<None Include="..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
@@ -55,7 +68,7 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.0" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.0" />
 		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.3" />
-		<PackageReference Include="WTelegramClient" Version="3.1.3" />
+		<PackageReference Include="WTelegramClient" Version="3.5.7" />
 	</ItemGroup>
 	<!--===================================================-->
 </Project>

@@ -1,16 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics.Tracing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using MTProto.Client.Events;
+using System.Xml.Linq;
 using MTProto.Core.Database;
 using MTProto.Utils.Md;
 
 namespace MTProto.Client
 {
-    public abstract class MTProtoClientBase : IDisposable
+    public abstract class MTProtoClientBase : MTProtoEventsClient, IDisposable
     {
         protected string _sessionName;
         protected string _sessionFileName;
@@ -19,45 +21,47 @@ namespace MTProto.Client
         protected string _apiHash;
         protected string _phoneNumber;
         protected Func<string> _verificationCodeProvider;
+        protected Func<string> _passphraseProvider;
         protected string _firstName;
         protected string _lastName;
         protected string _password;
         protected string _sessionKey;
         protected string _serverAddress;
         protected string _deviceModel;
+        protected string _systemVersion;
+        protected string _appVersion;
+        protected string _systemLangCode;
+        protected string _langPack;
+        protected string _langCode;
         protected bool _isBot;
 
-        #region events region
-        public virtual EventManager<MTProtoClientBase, TL.UpdateShortSentMessage> EventShortSentMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateAttachMenuBots> EventAttachMenuBots { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotCallbackQuery> EventBotCallbackQuery { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotChatInviteRequester> EventBotChatInviteRequester { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotCommands> EventBotCommands { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotInlineQuery> EventBotInlineQuery { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotInlineSend> EventBotInlineSend { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotMenuButton> EventBotMenuButton { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotPrecheckoutQuery> EventBotPrecheckoutQuery { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotShippingQuery> EventBotShippingQuery { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotStopped> EventBotStopped { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotWebhookJSON> EventBotWebhookJSON { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateBotWebhookJSONQuery> EventBotWebhookJSONQuery { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateChannelAvailableMessages> EventChannelAvailableMessages { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateChannelMessageForwards> EventChannelMessageForwards { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateChannelMessageViews> EventChannelMessageViews { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateNewChannelMessage> EventNewChannelMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateNewEncryptedMessage> EventNewEncryptedMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateNewMessage> EventNewMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateNewScheduledMessage> EventNewScheduledMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateNewStickerSet> EventNewStickerSet { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateEditChannelMessage> EventEditChannelMessage { get; set; }
-        public virtual EventManager<MTProtoClientBase, TL.UpdateEditMessage> EventEditMessage { get; set; }
         
-        #endregion
 
         public virtual IMTProtoDbProvider MTProtoDatabase { get; protected set; }
 
         public TL.User CachedMe { get; protected set; }
+
+        private Stream _sessionStore;
+
+        /// <summary>
+        /// This is phone number in case of users and bot id
+        /// in case of bots.
+        /// </summary>
+        protected string ownerId;
+        
         internal WTelegram.Client wClient;
+
+        protected internal virtual Stream SessionStore
+        {
+            get
+            {
+                _sessionStore ??= 
+                    new CustomSessionStore(MTProtoDatabase, ownerId);
+                return _sessionStore;
+            }
+            set { _sessionStore = value; }
+        }
+
 
         public abstract Task SendMessage(long chatId, MdContainer text, int ReplyToMessageId = 0);
         public abstract Task SendMessage(string chatId, MdContainer text, int ReplyToMessageId = 0);
@@ -82,79 +86,7 @@ namespace MTProto.Client
                 return;
             }
 
-            switch (arg)
-            {
-                case TL.UpdateShortSentMessage update:
-                    await (EventShortSentMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateAttachMenuBots update:
-                    await (EventAttachMenuBots?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotCallbackQuery update:
-                    await (EventBotCallbackQuery?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotChatInviteRequester update:
-                    await (EventBotChatInviteRequester?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotCommands update:
-                    await (EventBotCommands?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotInlineQuery update:
-                    await (EventBotInlineQuery?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotInlineSend update:
-                    await (EventBotInlineSend?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotMenuButton update:
-                    await (EventBotMenuButton?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotPrecheckoutQuery update:
-                    await (EventBotPrecheckoutQuery?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotShippingQuery update:
-                    await (EventBotShippingQuery?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotStopped update:
-                    await (EventBotStopped?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotWebhookJSON update:
-                    await (EventBotWebhookJSON?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateBotWebhookJSONQuery update:
-                    await (EventBotWebhookJSONQuery?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateChannelAvailableMessages update:
-                    await (EventChannelAvailableMessages?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateChannelMessageForwards update:
-                    await (EventChannelMessageForwards?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateChannelMessageViews update:
-                    await (EventChannelMessageViews?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateNewChannelMessage update:
-                    await (EventNewChannelMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateNewEncryptedMessage update:
-                    await (EventNewEncryptedMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateNewMessage update:
-                    await (EventNewMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateNewScheduledMessage update:
-                    await (EventNewScheduledMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateNewStickerSet update:
-                    await (EventNewStickerSet?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateEditChannelMessage update:
-                    await (EventEditChannelMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-                case TL.UpdateEditMessage update:
-                    await (EventEditMessage?.InvokeHandlers(this, update) ?? Task.CompletedTask);
-                    return;
-            }
-
+            await HandleValidEvent(this, arg);
             return;
         }
         protected internal virtual async Task StoreAccessHashes(Dictionary<long, TL.User> users)
@@ -199,5 +131,53 @@ namespace MTProto.Client
         #endregion
         public virtual long FixChatID(long chatId) =>
             Convert.ToInt64("-100" + Math.Abs(chatId));
+
+
+        #region store class
+        private class CustomSessionStore: Stream
+        {
+            internal IMTProtoDbProvider dbProvider;
+            public string OwnerId { get; set; }
+            public CustomSessionStore(IMTProtoDbProvider provider, string ownerId) 
+            {
+                dbProvider = provider ?? throw new ArgumentNullException(nameof(provider));
+                OwnerId = ownerId ?? throw new ArgumentNullException(nameof(ownerId));
+            }
+
+            public override int Read(byte[] buffer, int offset, int count)
+            {
+
+                var authKey = dbProvider.GetOwnerAuthData(OwnerId);
+                if (authKey == null || authKey.Length == 0)
+                    return 0;
+
+                Array.Copy(authKey, 0, buffer, offset, count);
+                return count;
+            }
+
+            public override void Write(byte[] buffer, int offset, int count)
+            {
+                var authData = count == buffer.Length ? 
+                    buffer : buffer[offset..(offset + count)];
+                if (authData.Length > 0)
+                {
+                    dbProvider.UpdateOwnerAuthKey(OwnerId, authData);
+                }
+            }
+
+            public override long Length => 
+                dbProvider.GetOwnerAuthData(OwnerId)?.Length ?? 0;
+            public override long Position { get => 0; set { } }
+            public override bool CanSeek => false;
+            public override bool CanRead => true;
+            public override bool CanWrite => true;
+            public override long Seek(long offset, SeekOrigin origin) => 0;
+            public override void SetLength(long value) { }
+            public override void Flush()
+            {
+                Console.WriteLine("Flushed!");
+            }
+        }
+        #endregion
     }
 }

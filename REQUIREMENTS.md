@@ -26,13 +26,7 @@ Preferred IDEs:
  * [JetBrains Rider (Version > 2020.3)](https://www.jetbrains.com/en-us/rider/download)
 
 SDK:
- * [.NET 5.0](https://dotnet.microsoft.com/download/dotnet/5.0)
-
-Game Engine:
- * [MonoGame](http://www.monogame.net/downloads/)
-
-MonoGame is an open-source, cross-platform Game Engine. The source code is available [here](https://github.com/MonoGame/MonoGame)
-
+ * [.NET 6.0](https://dotnet.microsoft.com/download/dotnet/6.0)
 
 Linux Requirements
 ==================
@@ -42,9 +36,4 @@ Preferred IDEs:
  * [JetBrains Rider (Version > 2020.3)](https://www.jetbrains.com/en-us/rider/download)
 
 SDK:
- * [.NET 5.0](https://dotnet.microsoft.com/download/dotnet/5.0)
-
-Game Engine:
- * [MonoGame](http://www.monogame.net/downloads/)
-
-MonoGame is an open-source, cross-platform Game Engine. The source code is available [here](https://github.com/MonoGame/MonoGame)
+ * [.NET 6.0](https://dotnet.microsoft.com/download/dotnet/5.0)

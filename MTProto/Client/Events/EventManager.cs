@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,11 +24,27 @@ namespace MTProto.Client.Events
             {
                 try
                 {
+
+                    var myAtt = handler.Method.GetCustomAttributes(true);
+                    if (myAtt != null &&  myAtt.Length > 0)
+                    {
+                        Console.WriteLine(myAtt);
+                    }
+
                     await handler?.Invoke(client, arg);
                 }
                 catch (ContinueGroupsException)
                 {
-                    return;
+                    continue;
+                }
+                catch (EndGroupsException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    //TODO: Do more stuff for logging.
+                    Console.WriteLine(ex.ToString());
                 }
             }
         }

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MTProto": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

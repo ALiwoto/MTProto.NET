@@ -15,40 +15,74 @@ namespace MTProto.Core.Database
     public sealed class DatabaseContext : DbContext, IMTProtoDbProvider
     {
         public string DbPath { get; set; }
-        public long OwnerId { get; set; }
+
+        private bool isMigrated = false;
+
 
         public DbSet<PeerInfo> PeerInfos { get; set; }
         public DbSet<OwnerPeerInfo> OwnerInfos { get; set; }
 
         private readonly object _dbLock = new();
-        public DatabaseContext(long ownerId = 0)
+        public DatabaseContext()
         {
-            OwnerId = ownerId;
-            SetOwnerId(ownerId);
+
         }
 
-        public DatabaseContext(string path, long ownerId)
+        public DatabaseContext(string path)
         {
-            OwnerId = ownerId;
-            DbPath = path;
+            DbPath = path ?? throw new ArgumentNullException(nameof(path));
         }
 
-        public void SetOwnerId(long ownerId)
+        public void SetPath(string path)
         {
-            DbPath = $"mtproto_{ownerId}.db";
+            DbPath = path ?? throw new ArgumentNullException(nameof(path));
         }
 
-        public async Task DoMigrate()
+        public void DoMigrate()
         {
+            lock (_dbLock)
+            {
+                if (isMigrated)
+                    return;
+                Database.Migrate();
+                isMigrated = true;
+            }
+        }
+
+        public async Task DoMigrateAsync()
+        {
+            if (isMigrated)
+                return;
+
             await Database.MigrateAsync();
+            isMigrated = true;
         }
 
-        public async Task<bool> VerifyOwner(bool isBot, bool secondTime = false)
+        public async Task<bool> VerifyOwner(OwnerPeerInfo peer, bool secondTime = false)
         {
+            if (!isMigrated)
+                return false;
+
+            peer.OwnerId = peer.OwnerId.Replace("+", "");
             try
             {
-                var theOwner = OwnerInfos.Find(OwnerId);
-                return theOwner.IsBot == isBot;
+                var theOwner = OwnerInfos.Find(peer.OwnerId);
+                if  (theOwner != null && theOwner.OwnerId == peer.OwnerId)
+                {
+                    if (theOwner.AreSame(peer))
+                    {
+                        // are they exactly same?
+                        return true;
+                    }
+
+                    // update the value inside of database
+                    OwnerInfos.Update(peer);
+                    await SaveChangesAsync();
+                }
+                else if (secondTime)
+                {
+                    throw new InvalidOperationException("Couldn't find owner after inserting.");
+                }
             }
             catch (Exception ex)
             {
@@ -56,19 +90,15 @@ namespace MTProto.Core.Database
                 {
                     throw;
                 }
-
-                lock (_dbLock)
-                {
-                    OwnerInfos.Add(new OwnerPeerInfo()
-                    {
-                        OwnerId = OwnerId,
-                        IsBot = isBot,
-                    });
-                    SaveChanges();
-                }
-                
-                return await VerifyOwner(isBot, true);
             }
+
+            lock (_dbLock)
+            {
+                OwnerInfos.Add(peer);
+                SaveChanges();
+            }
+
+            return await VerifyOwner(peer, true);
         }
 
         public void SaveNewUser(long userId, long accessHash) =>
@@ -112,6 +142,68 @@ namespace MTProto.Core.Database
         }
 
 
+
+        public OwnerPeerInfo GetOwner(string ownerId)
+        {
+            if (!isMigrated)
+            {
+                return null;
+            }
+
+            try
+            {
+                var tmp = OwnerInfos.Find(ownerId.Replace("+", ""));
+                return tmp;
+            }
+            catch { return null; }
+        }
+        public async Task<OwnerPeerInfo> GetOwnerAsync(string ownerId)
+        {
+            if (!isMigrated)
+            {
+                return null;
+            }
+
+
+            return await OwnerInfos.FindAsync(ownerId.Replace("+", ""));
+        }
+
+        public byte[] GetOwnerAuthData(string ownerId) => 
+            GetOwner(ownerId)?.AuthKey;
+        public async Task<byte[]> GetOwnerAuthDataAsync(string ownerId) =>
+            (await GetOwnerAsync(ownerId))?.AuthKey;
+
+        public void UpdateOwnerAuthKey(string ownerId, byte[] authKey)
+        {
+            if (!isMigrated)
+            {
+                return;
+            }
+
+            ownerId = ownerId.Replace("+", "");
+
+            var theOwner = GetOwner(ownerId);
+            if (theOwner == null)
+            {
+                lock (_dbLock)
+                {
+                    OwnerInfos.Add(new OwnerPeerInfo
+                    {
+                        AuthKey = authKey,
+                        OwnerId = ownerId,
+                    });
+                    SaveChanges();
+                }
+                return;
+            }
+
+            lock (_dbLock)
+            {
+                theOwner.AuthKey = authKey;
+                OwnerInfos.Update(theOwner);
+                SaveChanges();
+            }
+        }
     }
 
 }

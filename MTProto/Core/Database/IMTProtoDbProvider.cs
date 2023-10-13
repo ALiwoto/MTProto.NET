@@ -11,16 +11,20 @@ namespace MTProto.Core.Database
     public interface IMTProtoDbProvider: IDisposable
     {
         string DbPath { get; set; }
-        long OwnerId { get; protected set; }
         DbSet<PeerInfo> PeerInfos { get; set; }
         DbSet<OwnerPeerInfo> OwnerInfos { get; set; }
 
-        Task DoMigrate();
-        Task<bool> VerifyOwner(bool isBot, bool secondTime = false);
+        void DoMigrate();
+        Task DoMigrateAsync();
+        Task<bool> VerifyOwner(OwnerPeerInfo peer, bool secondTime = false);
         void SaveNewUser(long userId, long accessHash);
         void SaveNewChat(long chatId, long accessHash);
         void SaveNewChannel(long channelId, long accessHash);
         void SaveNewPeer(PeerInfo info);
+        void UpdateOwnerAuthKey(string ownerId, byte[] authKey);
+
+        byte[] GetOwnerAuthData(string ownerId);
+        public Task<byte[]> GetOwnerAuthDataAsync(string ownerId);
         Task<PeerInfo> GetPeerInfo(long peerId);
     }
 }
